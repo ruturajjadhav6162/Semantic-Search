@@ -1,0 +1,87 @@
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.encoders import jsonable_encoder
+from pydantic import BaseModel
+from typing import List
+from dotenv import load_dotenv
+import search
+import prompt_templates
+
+load_dotenv()
+
+
+# cors origins
+# cors origins
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "http://localhost:8888",
+    "http://localhost:58297",
+]
+
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class QueryRequest(BaseModel):
+    query: str
+    top_n: int = 10
+    groq: bool = True
+
+
+import os
+from fastapi import UploadFile
+GROQ_API_KEY=os.getenv("GROQ_API_KEY")
+if GROQ_API_KEY is None:
+    print("No GROQ_API_KEY found in environment variables")
+    exit(1)
+
+
+
+groqHandler = search.groqHandler(api_key=GROQ_API_KEY, template=prompt_templates.message_to_product6)
+wqs = search.WeaviateQueryService(collection="CleanedProducts", groqHandler=groqHandler, target_vector="name_master_sub_art_col_use_seas_gender")
+
+@app.get("/")
+async def read_root():
+    return '<h1> Welcome to the Semantic Search Engine </h1><br> <h2> Please use the <a href="http://localhost:8888/search/">/search/</a> endpoint to search for products </h2>'
+
+
+
+@app.post("/text_search")
+async def search_item(query: QueryRequest):
+
+    if not query.query:
+        return JSONResponse(status_code=400, content=jsonable_encoder({"error": "Query not found"}))
+    
+    limit = query.top_n
+    groq_simplify = query.groq
+    query = query.query
+
+
+    print(f" \n\n\n Got query : {query}\n\n\n")
+
+    # Perform search
+    response = wqs.get_results(query=query, limit=limit, groq_llama_simplfy=groq_simplify, print_responses_name=True)
+    return response
+
+
+@app.get('/recommends')
+async def recommend_products():
+    response = wqs.get_recommends()
+    return response
+
+
+
+@app.get("/images/{image_name}")
+async def get_image(image_name: str):
+    file_path = f"images/{image_name}.jpg"
+    return FileResponse(file_path)

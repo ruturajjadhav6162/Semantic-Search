@@ -1,0 +1,9 @@
+__pycache__/
+images/
+.env
+semantic/
+
+# To ignore random files created by LibreOffice
+*.csv#
+
+frontend/flutter/.dart_tool

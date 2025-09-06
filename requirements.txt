@@ -1,0 +1,13 @@
+weaviate-client
+python-dotenv
+fastapi
+groq
+jupyter
+pandas
+sse_starlette
+uvicorn
+Pillow
+transformers
+torch
+git+https://github.com/openai/CLIP.git
+python-multipart
